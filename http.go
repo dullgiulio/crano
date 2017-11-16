@@ -1,9 +1,7 @@
 package main
 
 import (
-	"compress/gzip"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
@@ -29,7 +27,6 @@ func newBrowser() *browser {
 }
 
 func (b *browser) finalize(req *http.Request) {
-	req.Header.Add("Accept-Encoding", "gzip, deflate")
 	req.Header.Add("Accept-Language", "en-US,en;q=0.9,et;q=0.8")
 	req.Header.Add("User-Agent", userAgent)
 }
@@ -59,7 +56,7 @@ func (b *browser) request(req *http.Request) ([]byte, error) {
 		return nil, fmt.Errorf("cannot perform GET request: %v", err)
 	}
 	defer resp.Body.Close()
-	body, err := readBody(resp)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read body: %v", err)
 	}
@@ -106,24 +103,6 @@ func (b *browser) normalize(base *url.URL, surl string) (string, error) {
 		return "", nil
 	}
 	return surl, nil
-}
-
-func readBody(resp *http.Response) ([]byte, error) {
-	var (
-		r   io.Reader
-		err error
-	)
-	switch resp.Header.Get("Content-Encoding") {
-	case "gzip":
-		r, err = gzip.NewReader(resp.Body)
-	default:
-		r = resp.Body
-	}
-	body, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read all: %v", err)
-	}
-	return body, nil
 }
 
 func inList(a string, list []string) bool {
